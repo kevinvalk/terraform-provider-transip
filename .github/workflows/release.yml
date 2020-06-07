@@ -1,0 +1,108 @@
+name: Release terraform provider
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+*'
+
+env:
+  name: terraform-provider-transip
+  go: ^1.14
+
+jobs:
+  # We first create a GitHub release
+  release:
+    runs-on: ubuntu-latest
+    name: Create GitHub release
+    outputs:
+      id: ${{ steps.create_release.outputs.id }}
+      html_url: ${{ steps.create_release.outputs.html_url }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+
+      # Obtain the tag version
+      - id: version
+        run: echo ::set-output name=value::${GITHUB_REF#refs/tags/}
+
+      # Create the GitHub release
+      - id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.version.outputs.value }}
+          release_name: Release ${{ steps.version.outputs.value }}
+          draft: false
+          prerelease: false
+
+  # Now we build each version and add it to the GitHub release
+  build:
+    needs: release
+    runs-on: ubuntu-latest
+    name: Build for ${{ matrix.os }}/${{ matrix.arch }}
+    strategy:
+      matrix:
+        arch:
+          - amd64
+          - '386'
+        os:
+          - darwin
+          - freebsd
+          - linux
+          - openbsd
+          - solaris
+          - windows
+
+        exclude:
+          - arch: '386'
+            os: darwin
+          - arch: '386'
+            os: solaris
+
+    steps:
+      # Setup phase
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.go }}
+      - uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-${{ hashFiles('**/go.sum') }}
+
+      # Obtain the tag version
+      - id: version
+        run: echo ::set-output name=value::${GITHUB_REF#refs/tags/}
+
+      # Setting the extension of the output file
+      - id: extension
+        run: |
+          if [ "${{ matrix.os }}" == "windows" ]; then
+            echo ::set-output name=value::.exe
+          else
+            echo ::set-output name=value::
+          fi
+
+      # Perform the actual build
+      - run: >-
+          go build
+          -o "${{ env.name }}_${{ steps.version.outputs.value }}${{ steps.extension.outputs.value }}"
+        env:
+          GO111MODULE: 'on'
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: '0'
+
+      # Zip it up so we can rename the artifact while keeping correct name of terraform provider
+      - run: >-
+          zip --junk-paths build.zip "${{ env.name }}_${{ steps.version.outputs.value }}${{ steps.extension.outputs.value }}"
+
+      # Upload the artifact
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.release.outputs.upload_url }}
+          asset_path: build.zip
+          asset_name: ${{ env.name }}-${{ steps.version.outputs.value }}-${{ matrix.os }}-${{ matrix.arch }}.zip
+          asset_content_type: application
