@@ -1,6 +1,6 @@
-module github.com/aequitas/terraform-provider-transip
+module github.com/kevinvalk/terraform-provider-transip
 
-go 1.13
+go 1.14
 
 require (
 	github.com/hashicorp/terraform-plugin-sdk v1.7.0

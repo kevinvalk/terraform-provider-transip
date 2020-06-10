@@ -1,4 +1,4 @@
-package main
+package transip
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/mutexkv"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 
 	"github.com/transip/gotransip/v6"
 	"github.com/transip/gotransip/v6/authenticator"
@@ -24,7 +25,7 @@ func envBoolFunc(k string) schema.SchemaDefaultFunc {
 	}
 }
 
-func Provider() *schema.Provider {
+func Provider() terraform.ResourceProvider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"account_name": &schema.Schema{

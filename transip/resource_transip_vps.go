@@ -1,4 +1,4 @@
-package main
+package transip
 
 import (
 	"encoding/base64"
