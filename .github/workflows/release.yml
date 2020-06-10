@@ -86,7 +86,7 @@ jobs:
       # Perform the actual build
       - run: >-
           go build
-          -o "${{ env.name }}_${{ steps.version.outputs.value }}${{ steps.extension.outputs.value }}"
+          -o "${{ env.name }}_v${{ steps.version.outputs.value }}${{ steps.extension.outputs.value }}"
         env:
           GO111MODULE: 'on'
           GOOS: ${{ matrix.os }}
@@ -95,7 +95,7 @@ jobs:
 
       # Zip it up so we can rename the artifact while keeping correct name of terraform provider
       - run: >-
-          zip --junk-paths build.zip "${{ env.name }}_${{ steps.version.outputs.value }}${{ steps.extension.outputs.value }}"
+          zip --junk-paths build.zip "${{ env.name }}_v${{ steps.version.outputs.value }}${{ steps.extension.outputs.value }}"
 
       # Upload the artifact
       - uses: actions/upload-release-asset@v1

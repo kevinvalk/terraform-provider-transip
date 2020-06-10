@@ -21,7 +21,7 @@ In order to use the provider you need a Transip account. For this account the AP
 
 Download the latest binary release from the [releases](https://github.com/kevinvalk/terraform-provider-transip/releases) page, unzip it and than you have two options for installing the provider:
 1. **System wide**: place the executable in `%APPDATA%\terraform.d\plugins` (Windows) or `~/.terraform.d/plugins` (All other systems) folder.
-2. **Project local**: place the executable in the `.terraform/plugins` directory where your main `.*tf` files reside.
+2. **Project local**: place the executable in the `.terraform/plugins/<os>_<arch>` directory where your main `.*tf` files reside.
 
 *See the [Third-party Plugins](https://www.terraform.io/docs/configuration/providers.html#third-party-plugins) section in the terraform documentation for more information.*
 
