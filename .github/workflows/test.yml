@@ -30,4 +30,4 @@ jobs:
 
       # Run test
       - run: >-
-          go test -v
+          go test ./transip -v
