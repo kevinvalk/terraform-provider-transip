@@ -1,14 +1,17 @@
 # Terraform Transip provider
 
-[![Build Status](https://travis-ci.org/aequitas/terraform-provider-transip.svg?branch=master)](https://travis-ci.org/aequitas/terraform-provider-transip)
+![Test terraform provider](https://github.com/kevinvalk/terraform-provider-transip/workflows/Test%20terraform%20provider/badge.svg)
 
-Provides resources for Transip resources using [Transip API](https://www.transip.eu/transip/api/)
+Provides terraform resources for Transip using the [Transip API](https://www.transip.eu/transip/api/)
 
 Supported resources:
 
-    - Domain name (data source, resource)
-    - Domain name DNS records (resource)
-    - VPS (data source, resource)
+- Domain name (data source, resource)
+- DNS record (resource)
+- VPS (data source, resource)
+  * Firewall (resource)
+- HA-IP (data source)
+- Private network (resource, data source)
 
 ## Requirements
 
@@ -16,19 +19,21 @@ In order to use the provider you need a Transip account. For this account the AP
 
 ## Installation
 
-Download the latest binary release from the [Releases](https://github.com/aequitas/terraform-provider-transip/releases) page, unzip it to a location in `PATH` (eg: `/usr/local/bin/`).
+Download the latest binary release from the [releases](https://github.com/kevinvalk/terraform-provider-transip/releases) page, unzip it and than you have two options for installing the provider:
+1. **System wide**: place the executable in `%APPDATA%\terraform.d\plugins` (Windows) or `~/.terraform.d/plugins` (All other systems) folder.
+2. **Project local**: place the executable in the `.terraform/plugins` directory where your main `.*tf` files reside.
+
+*See the [Third-party Plugins](https://www.terraform.io/docs/configuration/providers.html#third-party-plugins) section in the terraform documentation for more information.*
 
 ## Notes
 
 - The Transip API managed DNS Entries as a list property of a Domain object. In this implementation I have opted to give DNS entries their own resource `transip_dns_record` to make management more in line with other Terraform DNS Providers.
 
-- Concurrently updating of DNS Entries is currently unstable. To improve reliability run Terraform with `-parallelism=1`.
-
 - Not all resources (especially the VPS resource) have been thoroughly tested. Use with care.
 
 ## Example
 
-Also see examples in: [examples/](https://github.com/aequitas/terraform-provider-transip/tree/master/examples).
+Also see examples in: [examples/](https://github.com/kevinvalk/terraform-provider-transip/tree/master/examples).
 
 ```hcl
 # Enable Transip API, whitelist your IP, create private key and provide it here
