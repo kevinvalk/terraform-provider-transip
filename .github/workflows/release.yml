@@ -10,6 +10,7 @@ env:
   go: ^1.14
 
 jobs:
+
   # We first create a GitHub release
   release:
     runs-on: ubuntu-latest
@@ -18,6 +19,7 @@ jobs:
       id: ${{ steps.create_release.outputs.id }}
       html_url: ${{ steps.create_release.outputs.html_url }}
       upload_url: ${{ steps.create_release.outputs.upload_url }}
+      tag: ${{ steps.version.outputs.value }}
     steps:
 
       # Obtain the tag version
@@ -70,13 +72,9 @@ jobs:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-build-${{ hashFiles('**/go.sum') }}
 
-      # Obtain the tag version
-      - id: version
-        run: echo ::set-output name=value::${GITHUB_REF#refs/tags/}
-
       # Setting the extension of the output file
       - id: extension
-        run: |
+        run: >-
           if [ "${{ matrix.os }}" == "windows" ]; then
             echo ::set-output name=value::.exe
           else
@@ -86,16 +84,19 @@ jobs:
       # Perform the actual build
       - run: >-
           go build
-          -o "${{ env.name }}_v${{ steps.version.outputs.value }}${{ steps.extension.outputs.value }}"
+          -o "${{ env.name }}_v${{ needs.release.outputs.tag }}${{ steps.extension.outputs.value }}"
         env:
           GO111MODULE: 'on'
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
           CGO_ENABLED: '0'
 
-      # Zip it up so we can rename the artifact while keeping correct name of terraform provider
+      # Zip it up so we can rename the artifact while keeping proper naming for Terraform
       - run: >-
-          zip --junk-paths build.zip "${{ env.name }}_v${{ steps.version.outputs.value }}${{ steps.extension.outputs.value }}"
+          zip
+          --junk-paths
+          build.zip
+          "${{ env.name }}_v${{ needs.release.outputs.tag }}${{ steps.extension.outputs.value }}"
 
       # Upload the artifact
       - uses: actions/upload-release-asset@v1
@@ -104,5 +105,5 @@ jobs:
         with:
           upload_url: ${{ needs.release.outputs.upload_url }}
           asset_path: build.zip
-          asset_name: ${{ env.name }}-${{ steps.version.outputs.value }}-${{ matrix.os }}-${{ matrix.arch }}.zip
+          asset_name: ${{ env.name }}-${{ needs.release.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}.zip
           asset_content_type: application
