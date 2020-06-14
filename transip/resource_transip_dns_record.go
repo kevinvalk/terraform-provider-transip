@@ -91,29 +91,57 @@ func resourceDNSRecord() *schema.Resource {
 
 func resourceDNSRecordCreate(d *schema.ResourceData, m interface{}) error {
 	domainName := d.Get("domain").(string)
+
 	entryName := d.Get("name").(string)
+	expire := d.Get("expire").(int)
 	entryType := d.Get("type").(string)
+	content := d.Get("content").(*schema.Set)
 
 	client := m.(repository.Client)
 	repository := domain.Repository{Client: client}
 
-	dnsEntries, err := repository.GetDNSEntries(domainName)
-	if err != nil {
-		return fmt.Errorf("failed to read DNS record entries for domain %s: %s", domainName, err)
-	}
+	return resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+		// We lock resources because Transip only allows one change per domain
+		// https://github.com/aequitas/terraform-provider-transip/issues/22
+		dnsDomainMutexKV.Lock(domainName)
+		defer dnsDomainMutexKV.Unlock(domainName)
 
-	for _, e := range dnsEntries {
-		if e.Name == entryName && e.Type == entryType {
-			return fmt.Errorf("DNS entries for %s record named %s already exist", entryType, entryName)
+		// Read current entries to figure out what needs to be changed
+		log.Printf("[DEBUG] terraform-provider-transip creating %s\n", entryName)
+		dnsEntries, err := repository.GetDNSEntries(domainName)
+		if err != nil {
+			return retryableDNSRecordErrorf(err, "failed to get existing DNS record entries for domain %s", domainName)
 		}
-	}
 
-	// Note: as soon as we use SetId, we assume the resource has been created.
-	// In this case that is not strictly true...
-	id := fmt.Sprintf("%s/%s/%s", domainName, entryType, entryName)
-	d.SetId(id)
+		// Check if record already exists
+		for _, e := range dnsEntries {
+			if e.Name == entryName && e.Type == entryType {
+				return resource.NonRetryableError(fmt.Errorf("DNS entries for %s record named %s already exist", entryType, entryName))
+			}
+		}
 
-	return resourceDNSRecordUpdate(d, m)
+		// add all desired entries for the current entry/expiry/type combination
+		for _, c := range content.List() {
+			dnsEntry := domain.DNSEntry{
+				Name:    entryName,
+				Expire:  expire,
+				Type:    entryType,
+				Content: c.(string),
+			}
+
+			log.Printf("[DEBUG] terraform-provider-transip: %s adding %v\n", entryName, dnsEntry)
+			err := repository.AddDNSEntry(domainName, dnsEntry)
+
+			if err != nil {
+				return retryableDNSRecordErrorf(err, "failed to add DNS record entry for domain %s (%v)", domainName, dnsEntry)
+			}
+		}
+
+		// SetId, which marks the record as created for Terraform
+		d.SetId(fmt.Sprintf("%s/%s/%s", domainName, entryType, entryName))
+
+		return resource.NonRetryableError(resourceDNSRecordRead(d, m))
+	})
 }
 
 func resourceDNSRecordRead(d *schema.ResourceData, m interface{}) error {
