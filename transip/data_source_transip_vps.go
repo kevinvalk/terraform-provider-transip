@@ -81,7 +81,7 @@ func dataSourceVps() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"ipv6_address": {
+			"ipv6_addresses": {
 				Computed: true,
 				Type:     schema.TypeList,
 				Elem: &schema.Schema{
@@ -110,10 +110,9 @@ func dataSourceVpsRead(d *schema.ResourceData, m interface{}) error {
 	var ipv4Addresses []string
 	var ipv6Addresses []string
 	for _, address := range ipAddresses {
-		if len(address.Address) == 4 {
+		if address.Address.To4() != nil {
 			ipv4Addresses = append(ipv4Addresses, address.Address.String())
-		}
-		if len(address.Address) == 16 {
+		} else {
 			ipv6Addresses = append(ipv6Addresses, address.Address.String())
 		}
 	}
